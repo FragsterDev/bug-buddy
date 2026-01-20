@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import BugCard from "@/components/bugs/BugCard";
 import AddBugDialog from "@/components/bugs/AddBugDialog";
 import CollaboratorsDialog from "@/components/projects/CollaboratorsDialog";
-import { Bug, Collaborator } from "@/types";
+import { Bug, Collaborator, MediaAttachment } from "@/types";
 
 // Mock current user - in a real app this would come from auth
 const currentUser: Collaborator = {
@@ -60,6 +60,7 @@ const ProjectPage = () => {
     title: string;
     description: string;
     assignedTo?: Collaborator;
+    media?: MediaAttachment[];
   }) => {
     const newBug: Bug = {
       id: Date.now().toString(),
@@ -70,6 +71,7 @@ const ProjectPage = () => {
       createdAt: new Date().toISOString(),
       reportedBy: currentUser,
       assignedTo: bugData.assignedTo,
+      media: bugData.media,
     };
     setBugs([newBug, ...bugs]);
   };
