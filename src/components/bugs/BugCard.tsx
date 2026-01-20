@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { CheckCircle, Circle, MessageSquare } from "lucide-react";
+import { CheckCircle, Circle, MessageSquare, User, UserCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bug } from "@/types";
 import RemarksDialog from "./RemarksDialog";
 import ViewRemarksDialog from "./ViewRemarksDialog";
@@ -10,9 +11,10 @@ import ViewRemarksDialog from "./ViewRemarksDialog";
 interface BugCardProps {
   bug: Bug;
   onResolve: (bugId: string, remarks: string) => void;
+  canResolve: boolean;
 }
 
-const BugCard = ({ bug, onResolve }: BugCardProps) => {
+const BugCard = ({ bug, onResolve, canResolve }: BugCardProps) => {
   const [remarksOpen, setRemarksOpen] = useState(false);
   const [viewRemarksOpen, setViewRemarksOpen] = useState(false);
 
@@ -24,6 +26,15 @@ const BugCard = ({ bug, onResolve }: BugCardProps) => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -61,6 +72,37 @@ const BugCard = ({ bug, onResolve }: BugCardProps) => {
 
                 <p className="text-sm text-muted-foreground">{bug.description}</p>
 
+                {/* Reporter and Assignee info */}
+                <div className="flex flex-wrap items-center gap-4 mt-3">
+                  <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Reported by:</span>
+                    <div className="flex items-center gap-1">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="bg-primary/20 text-primary text-[10px]">
+                          {getInitials(bug.reportedBy.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-foreground">{bug.reportedBy.name}</span>
+                    </div>
+                  </div>
+
+                  {bug.assignedTo && (
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Assigned to:</span>
+                      <div className="flex items-center gap-1">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="bg-accent/50 text-accent-foreground text-[10px]">
+                            {getInitials(bug.assignedTo.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-foreground">{bug.assignedTo.name}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <p className="text-xs text-muted-foreground mt-2">
                   Created: {formatDate(bug.createdAt)}
                 </p>
@@ -68,7 +110,7 @@ const BugCard = ({ bug, onResolve }: BugCardProps) => {
             </div>
 
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-              {bug.status === "open" && (
+              {bug.status === "open" && canResolve && (
                 <Button
                   size="sm"
                   onClick={() => setRemarksOpen(true)}
@@ -77,6 +119,12 @@ const BugCard = ({ bug, onResolve }: BugCardProps) => {
                   <CheckCircle className="h-4 w-4 mr-1" />
                   Mark as Resolved
                 </Button>
+              )}
+
+              {bug.status === "open" && !canResolve && (
+                <p className="text-xs text-muted-foreground italic">
+                  Only the assignee or project owner can resolve this bug
+                </p>
               )}
 
               {bug.status === "resolved" && bug.remarks && (
