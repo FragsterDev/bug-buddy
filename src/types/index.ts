@@ -24,6 +24,13 @@ export interface Project {
   collaborators: Collaborator[];
 }
 
+export interface MediaAttachment {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  name: string;
+}
+
 export interface Bug {
   id: string;
   projectId: string;
@@ -35,6 +42,7 @@ export interface Bug {
   remarks?: string;
   reportedBy: Collaborator;
   assignedTo?: Collaborator;
+  media?: MediaAttachment[];
 }
 
 export interface ChatMessage {
