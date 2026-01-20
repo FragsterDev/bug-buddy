@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, Circle, MessageSquare, User, UserCheck } from "lucide-react";
+import { CheckCircle, Circle, MessageSquare, User, UserCheck, Image, Play } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bug } from "@/types";
 import RemarksDialog from "./RemarksDialog";
 import ViewRemarksDialog from "./ViewRemarksDialog";
+import MediaViewer from "./MediaViewer";
 
 interface BugCardProps {
   bug: Bug;
@@ -17,6 +18,8 @@ interface BugCardProps {
 const BugCard = ({ bug, onResolve, canResolve }: BugCardProps) => {
   const [remarksOpen, setRemarksOpen] = useState(false);
   const [viewRemarksOpen, setViewRemarksOpen] = useState(false);
+  const [mediaViewerOpen, setMediaViewerOpen] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -35,6 +38,11 @@ const BugCard = ({ bug, onResolve, canResolve }: BugCardProps) => {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const openMediaViewer = (index: number) => {
+    setSelectedMediaIndex(index);
+    setMediaViewerOpen(true);
   };
 
   return (
@@ -71,6 +79,50 @@ const BugCard = ({ bug, onResolve, canResolve }: BugCardProps) => {
                 </div>
 
                 <p className="text-sm text-muted-foreground">{bug.description}</p>
+
+                {/* Media Attachments */}
+                {bug.media && bug.media.length > 0 && (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-1 mb-2">
+                      <Image className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {bug.media.length} attachment{bug.media.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {bug.media.slice(0, 4).map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="relative cursor-pointer group"
+                          onClick={() => openMediaViewer(index)}
+                        >
+                          {item.type === "image" ? (
+                            <img
+                              src={item.url}
+                              alt={item.name}
+                              className="w-full h-16 object-cover rounded-md border border-border group-hover:border-primary transition-colors"
+                            />
+                          ) : (
+                            <div className="relative">
+                              <video
+                                src={item.url}
+                                className="w-full h-16 object-cover rounded-md border border-border group-hover:border-primary transition-colors"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md">
+                                <Play className="h-6 w-6 text-white" />
+                              </div>
+                            </div>
+                          )}
+                          {index === 3 && bug.media && bug.media.length > 4 && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-md">
+                              <span className="text-white font-medium">+{bug.media.length - 4}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Reporter and Assignee info */}
                 <div className="flex flex-wrap items-center gap-4 mt-3">
@@ -158,6 +210,15 @@ const BugCard = ({ bug, onResolve, canResolve }: BugCardProps) => {
         remarks={bug.remarks || ""}
         resolvedAt={bug.resolvedAt}
       />
+
+      {bug.media && bug.media.length > 0 && (
+        <MediaViewer
+          open={mediaViewerOpen}
+          onOpenChange={setMediaViewerOpen}
+          media={bug.media}
+          initialIndex={selectedMediaIndex}
+        />
+      )}
     </>
   );
 };
