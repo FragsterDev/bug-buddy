@@ -1,17 +1,33 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Bug as BugIcon } from "lucide-react";
+import { ArrowLeft, Plus, Bug as BugIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BugCard from "@/components/bugs/BugCard";
 import AddBugDialog from "@/components/bugs/AddBugDialog";
-import { Bug } from "@/types";
+import CollaboratorsDialog from "@/components/projects/CollaboratorsDialog";
+import { Bug, Collaborator } from "@/types";
+
+// Mock current user - in a real app this would come from auth
+const currentUser: Collaborator = {
+  id: "current-user",
+  name: "John Doe",
+  email: "john@example.com",
+};
 
 const ProjectPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [addBugOpen, setAddBugOpen] = useState(false);
+  const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
 
-  // Mock bugs data - in a real app this would come from a database
+  // Mock project owner - in a real app this would come from the project data
+  const ownerId = "current-user";
+
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([
+    { id: "collab-1", name: "Jane Smith", email: "jane@example.com" },
+    { id: "collab-2", name: "Bob Wilson", email: "bob@example.com" },
+  ]);
+
   const [bugs, setBugs] = useState<Bug[]>([
     {
       id: "1",
@@ -21,6 +37,8 @@ const ProjectPage = () => {
         "Users report that the login button sometimes doesn't respond on the first click. This happens mainly on mobile devices.",
       status: "open",
       createdAt: new Date(Date.now() - 86400000).toISOString(),
+      reportedBy: { id: "collab-1", name: "Jane Smith", email: "jane@example.com" },
+      assignedTo: { id: "collab-2", name: "Bob Wilson", email: "bob@example.com" },
     },
     {
       id: "2",
@@ -31,17 +49,27 @@ const ProjectPage = () => {
       status: "resolved",
       createdAt: new Date(Date.now() - 172800000).toISOString(),
       resolvedAt: new Date(Date.now() - 86400000).toISOString(),
-      remarks: "Fixed by updating the local storage logic to properly save user preferences.",
+      remarks:
+        "Fixed by updating the local storage logic to properly save user preferences.",
+      reportedBy: currentUser,
+      assignedTo: currentUser,
     },
   ]);
 
-  const handleAddBug = (bugData: { title: string; description: string }) => {
+  const handleAddBug = (bugData: {
+    title: string;
+    description: string;
+    assignedTo?: Collaborator;
+  }) => {
     const newBug: Bug = {
       id: Date.now().toString(),
       projectId: id || "",
-      ...bugData,
+      title: bugData.title,
+      description: bugData.description,
       status: "open",
       createdAt: new Date().toISOString(),
+      reportedBy: currentUser,
+      assignedTo: bugData.assignedTo,
     };
     setBugs([newBug, ...bugs]);
   };
@@ -61,6 +89,24 @@ const ProjectPage = () => {
     );
   };
 
+  const handleAddCollaborator = (collaborator: Collaborator) => {
+    setCollaborators([...collaborators, collaborator]);
+  };
+
+  const handleRemoveCollaborator = (collaboratorId: string) => {
+    setCollaborators(collaborators.filter((c) => c.id !== collaboratorId));
+  };
+
+  // Check if current user can resolve a bug
+  const canResolveBug = (bug: Bug) => {
+    const isOwner = currentUser.id === ownerId;
+    const isAssignee = bug.assignedTo?.id === currentUser.id;
+    return isOwner || isAssignee;
+  };
+
+  // All collaborators including current user for assignment
+  const allCollaborators = [currentUser, ...collaborators];
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
@@ -79,10 +125,16 @@ const ProjectPage = () => {
 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-medium text-foreground">Bug History</h2>
-        <Button onClick={() => setAddBugOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Report Bug
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setCollaboratorsOpen(true)}>
+            <Users className="h-4 w-4 mr-2" />
+            Collaborators ({collaborators.length})
+          </Button>
+          <Button onClick={() => setAddBugOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Report Bug
+          </Button>
+        </div>
       </div>
 
       {bugs.length === 0 ? (
@@ -104,7 +156,12 @@ const ProjectPage = () => {
       ) : (
         <div className="relative">
           {bugs.map((bug) => (
-            <BugCard key={bug.id} bug={bug} onResolve={handleResolveBug} />
+            <BugCard
+              key={bug.id}
+              bug={bug}
+              onResolve={handleResolveBug}
+              canResolve={canResolveBug(bug)}
+            />
           ))}
         </div>
       )}
@@ -113,6 +170,15 @@ const ProjectPage = () => {
         open={addBugOpen}
         onOpenChange={setAddBugOpen}
         onAddBug={handleAddBug}
+        collaborators={allCollaborators}
+      />
+
+      <CollaboratorsDialog
+        open={collaboratorsOpen}
+        onOpenChange={setCollaboratorsOpen}
+        collaborators={collaborators}
+        onAddCollaborator={handleAddCollaborator}
+        onRemoveCollaborator={handleRemoveCollaborator}
       />
     </div>
   );

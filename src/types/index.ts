@@ -7,12 +7,21 @@ export interface User {
   avatar: string;
 }
 
+export interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
   description: string;
   githubUrl: string;
   createdAt: string;
+  ownerId: string;
+  collaborators: Collaborator[];
 }
 
 export interface Bug {
@@ -24,6 +33,8 @@ export interface Bug {
   createdAt: string;
   resolvedAt?: string;
   remarks?: string;
+  reportedBy: Collaborator;
+  assignedTo?: Collaborator;
 }
 
 export interface ChatMessage {

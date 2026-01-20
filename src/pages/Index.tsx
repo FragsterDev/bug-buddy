@@ -18,6 +18,8 @@ const Index = () => {
       id: Date.now().toString(),
       ...projectData,
       createdAt: new Date().toISOString(),
+      ownerId: "current-user",
+      collaborators: [],
     };
     setProjects([...projects, newProject]);
   };

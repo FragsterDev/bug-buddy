@@ -10,22 +10,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Collaborator } from "@/types";
 
 interface AddBugDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddBug: (bug: { title: string; description: string }) => void;
+  onAddBug: (bug: {
+    title: string;
+    description: string;
+    assignedTo?: Collaborator;
+  }) => void;
+  collaborators: Collaborator[];
 }
 
-const AddBugDialog = ({ open, onOpenChange, onAddBug }: AddBugDialogProps) => {
+const AddBugDialog = ({
+  open,
+  onOpenChange,
+  onAddBug,
+  collaborators,
+}: AddBugDialogProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [assignedToId, setAssignedToId] = useState<string>("");
 
   const handleSubmit = () => {
     if (title.trim()) {
-      onAddBug({ title, description });
+      const assignedTo = collaborators.find((c) => c.id === assignedToId);
+      onAddBug({ title, description, assignedTo });
       setTitle("");
       setDescription("");
+      setAssignedToId("");
       onOpenChange(false);
     }
   };
@@ -59,6 +80,22 @@ const AddBugDialog = ({ open, onOpenChange, onAddBug }: AddBugDialogProps) => {
               className="bg-muted border-border resize-none"
               rows={4}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assignee">Assign To (Optional)</Label>
+            <Select value={assignedToId} onValueChange={setAssignedToId}>
+              <SelectTrigger className="bg-muted border-border">
+                <SelectValue placeholder="Select collaborator" />
+              </SelectTrigger>
+              <SelectContent>
+                {collaborators.map((collaborator) => (
+                  <SelectItem key={collaborator.id} value={collaborator.id}>
+                    {collaborator.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
