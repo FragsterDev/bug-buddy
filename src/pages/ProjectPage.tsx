@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Bug as BugIcon, Users } from "lucide-react";
+import { ArrowLeft, Plus, Bug as BugIcon, Users, CheckCircle, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import BugCard from "@/components/bugs/BugCard";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import AddBugDialog from "@/components/bugs/AddBugDialog";
 import CollaboratorsDialog from "@/components/projects/CollaboratorsDialog";
+import BugDetailModal from "@/components/bugs/BugDetailModal";
 import { Bug, Collaborator, MediaAttachment } from "@/types";
 
 // Mock current user - in a real app this would come from auth
@@ -19,6 +29,8 @@ const ProjectPage = () => {
   const navigate = useNavigate();
   const [addBugOpen, setAddBugOpen] = useState(false);
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
+  const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
+  const [bugDetailOpen, setBugDetailOpen] = useState(false);
 
   // Mock project owner - in a real app this would come from the project data
   const ownerId = "current-user";
@@ -109,8 +121,35 @@ const ProjectPage = () => {
   // All collaborators including current user for assignment
   const allCollaborators = [currentUser, ...collaborators];
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleRowClick = (bug: Bug) => {
+    setSelectedBug(bug);
+    setBugDetailOpen(true);
+  };
+
+  // Sort bugs: older first (ascending by createdAt)
+  const sortedBugs = [...bugs].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <Button
           variant="ghost"
@@ -126,7 +165,7 @@ const ProjectPage = () => {
       </div>
 
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-medium text-foreground">Bug History</h2>
+        <h2 className="text-lg font-medium text-foreground">Bug List</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setCollaboratorsOpen(true)}>
             <Users className="h-4 w-4 mr-2" />
@@ -156,15 +195,69 @@ const ProjectPage = () => {
           </Button>
         </div>
       ) : (
-        <div className="relative">
-          {bugs.map((bug) => (
-            <BugCard
-              key={bug.id}
-              bug={bug}
-              onResolve={handleResolveBug}
-              canResolve={canResolveBug(bug)}
-            />
-          ))}
+        <div className="border border-border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-16">Sno.</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="w-32">Date Created</TableHead>
+                <TableHead className="w-28">Status</TableHead>
+                <TableHead className="w-32">Date Resolved</TableHead>
+                <TableHead className="w-24 text-center">Assigned To</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedBugs.map((bug, index) => (
+                <TableRow
+                  key={bug.id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleRowClick(bug)}
+                >
+                  <TableCell className="font-medium text-muted-foreground">
+                    {index + 1}
+                  </TableCell>
+                  <TableCell className="font-medium">{bug.title}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDate(bug.createdAt)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={bug.status === "resolved" ? "default" : "secondary"}
+                      className={
+                        bug.status === "resolved"
+                          ? "bg-success/20 text-success border-success/30"
+                          : "bg-warning/20 text-warning border-warning/30"
+                      }
+                    >
+                      <span className="flex items-center gap-1">
+                        {bug.status === "resolved" ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : (
+                          <Circle className="h-3 w-3" />
+                        )}
+                        {bug.status}
+                      </span>
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {bug.resolvedAt ? formatDate(bug.resolvedAt) : "—"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {bug.assignedTo ? (
+                      <Avatar className="h-7 w-7 mx-auto">
+                        <AvatarFallback className="bg-accent/50 text-accent-foreground text-xs">
+                          {getInitials(bug.assignedTo.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -181,6 +274,14 @@ const ProjectPage = () => {
         collaborators={collaborators}
         onAddCollaborator={handleAddCollaborator}
         onRemoveCollaborator={handleRemoveCollaborator}
+      />
+
+      <BugDetailModal
+        bug={selectedBug}
+        open={bugDetailOpen}
+        onOpenChange={setBugDetailOpen}
+        onResolve={handleResolveBug}
+        canResolve={selectedBug ? canResolveBug(selectedBug) : false}
       />
     </div>
   );
