@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Bug as BugIcon, Users, CheckCircle, Circle } from "lucide-react";
+import { ArrowLeft, Plus, Bug as BugIcon, Users, CheckCircle, Circle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,6 +32,8 @@ const ProjectPage = () => {
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
   const [selectedBug, setSelectedBug] = useState<Bug | null>(null);
   const [bugDetailOpen, setBugDetailOpen] = useState(false);
+  const [filter, setFilter] = useState<"all" | "resolved" | "unresolved">("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Mock project owner - in a real app this would come from the project data
   const ownerId = "current-user";
@@ -143,10 +146,19 @@ const ProjectPage = () => {
     setBugDetailOpen(true);
   };
 
-  // Sort bugs: older first (ascending by createdAt)
-  const sortedBugs = [...bugs].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
+  // Filter and search bugs
+  const filteredBugs = useMemo(() => {
+    return bugs
+      .filter((bug) => {
+        if (filter === "resolved") return bug.status === "resolved";
+        if (filter === "unresolved") return bug.status === "open";
+        return true;
+      })
+      .filter((bug) =>
+        bug.title.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [bugs, filter, searchQuery]);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -177,6 +189,41 @@ const ProjectPage = () => {
           </Button>
         </div>
       </div>
+      {/* Filters */}
+      <div className="flex items-center gap-2 mb-4">
+        <Button
+          variant={filter === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("all")}
+        >
+          All
+        </Button>
+        <Button
+          variant={filter === "resolved" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("resolved")}
+        >
+          Resolved
+        </Button>
+        <Button
+          variant={filter === "unresolved" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("unresolved")}
+        >
+          Unresolved
+        </Button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search bugs by title..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
 
       {bugs.length === 0 ? (
         <div className="text-center py-16">
@@ -194,6 +241,18 @@ const ProjectPage = () => {
             Report Bug
           </Button>
         </div>
+      ) : filteredBugs.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+            <Search className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-medium text-foreground mb-2">
+            No bugs found
+          </h2>
+          <p className="text-muted-foreground">
+            Try adjusting your filters or search query.
+          </p>
+        </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
           <Table>
@@ -208,7 +267,7 @@ const ProjectPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedBugs.map((bug, index) => (
+              {filteredBugs.map((bug, index) => (
                 <TableRow
                   key={bug.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
