@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Bug as BugIcon, Users, CheckCircle, Circle, Search } from "lucide-react";
+import { ArrowLeft, Plus, Bug as BugIcon, Users, CheckCircle, Circle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,6 +34,8 @@ const ProjectPage = () => {
   const [bugDetailOpen, setBugDetailOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "resolved" | "unresolved">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Mock project owner - in a real app this would come from the project data
   const ownerId = "current-user";
@@ -160,6 +162,24 @@ const ProjectPage = () => {
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [bugs, filter, searchQuery]);
 
+  // Pagination
+  const totalPages = Math.ceil(filteredBugs.length / itemsPerPage);
+  const paginatedBugs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredBugs.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredBugs, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (newFilter: "all" | "resolved" | "unresolved") => {
+    setFilter(newFilter);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
@@ -194,21 +214,21 @@ const ProjectPage = () => {
         <Button
           variant={filter === "all" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("all")}
+          onClick={() => handleFilterChange("all")}
         >
           All
         </Button>
         <Button
           variant={filter === "resolved" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("resolved")}
+          onClick={() => handleFilterChange("resolved")}
         >
           Resolved
         </Button>
         <Button
           variant={filter === "unresolved" ? "default" : "outline"}
           size="sm"
-          onClick={() => setFilter("unresolved")}
+          onClick={() => handleFilterChange("unresolved")}
         >
           Unresolved
         </Button>
@@ -220,7 +240,7 @@ const ProjectPage = () => {
         <Input
           placeholder="Search bugs by title..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={handleSearchChange}
           className="pl-9"
         />
       </div>
@@ -267,14 +287,14 @@ const ProjectPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBugs.map((bug, index) => (
+              {paginatedBugs.map((bug, index) => (
                 <TableRow
                   key={bug.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => handleRowClick(bug)}
                 >
                   <TableCell className="font-medium text-muted-foreground">
-                    {index + 1}
+                    {(currentPage - 1) * itemsPerPage + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">{bug.title}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -317,6 +337,50 @@ const ProjectPage = () => {
               ))}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filteredBugs.length > itemsPerPage && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+            {Math.min(currentPage * itemsPerPage, filteredBugs.length)} of{" "}
+            {filteredBugs.length} bugs
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  className="w-8 h-8 p-0"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
 
